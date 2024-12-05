@@ -53,24 +53,14 @@ threshold = graythresh(I_enhanced);
 I_binary = imbinarize(I_enhanced, threshold);
 
 figure, imshow(I_binary);
-title ('Binarized Image Otsu Method');
+title ('Binarized Image');
 
 %7.3 Expermiment with other threshholding methods
 %Manual Tresholding:
 I_binary_manual = imbinarize(I_enhanced, 0.5);
 
 figure, imshow(I_binary_manual);
-title ('Binarized Manual Test 1');
-
-I_binary_manual2 = imbinarize(I_enhanced, 0.75)
-
-figure, imshow(I_binary_manual2);
-title('Binarized Manual Test 2');
-
-%Need to find a way to store all files locally stored in directory!!! with
-%github to make looking through easy
-
-
+Title ('Binarized Man')
 % Task 2: Edge detection ------------------------
 
 % Task 3: Simple segmentation --------------------
