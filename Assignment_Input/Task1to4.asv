@@ -53,16 +53,69 @@ threshold = graythresh(I_enhanced);
 I_binary = imbinarize(I_enhanced, threshold);
 
 figure, imshow(I_binary);
-title ('Binarized Image');
+title ('Binarized Image Otsu Method');
 
 %7.3 Expermiment with other threshholding methods
 %Manual Tresholding:
 I_binary_manual = imbinarize(I_enhanced, 0.5);
 
 figure, imshow(I_binary_manual);
-Title ('Binarized Man')
+title ('Binarized Manual Test 1');
+
+I_binary_manual2 = imbinarize(I_enhanced, 0.75)
+
+figure, imshow(I_binary_manual2);
+title('Binarized Manual Test 2');
+
+%Need to find a way to store all files locally stored in directory!!! with
+%github to make looking through easy
+
+
 % Task 2: Edge detection ------------------------
+%Sobel Edge Detection
+sobel_edges = edge(I_enhanced, 'Sobel');
+
+figure, imshow(sobel_edges);
+title('Sobel Edge Detection')
+%Prewitt Edge Detecttion
+prewitt_edges = edge(I_enhanced, 'prewitt');
+
+figure, imshow(prewitt_edges);
+title('Prewitt Edge Detection');
+%Canny Edge Detection
+canny_edges = edge(I_enhanced, 'Canny');
+
+figure, imshow(canny_edges);
+title('Canny Edge Detection')
+%Roberts Edge Detection
+roberts_edges = edge(I_enhanced, 'Roberts');
+
+figure, imshow(roberts_edges);
+title('Roberts Edge Detection');
+
+figure;
+subplot(2, 2, 1);
+imshow(sobel_edges);
+title('Sobel Edge Detection');
+
+subplot(2, 2, 2);
+imshow(prewitt_edges);
+title('Prewitt Edge Detection');
+
+subplot(2, 2, 3);
+imshow(canny_edges);
+title('Canny Edge Detection');
+
+subplot(2, 2, 4);
+imshow(roberts_edges);
+title('Roberts Edge Detection');
+%After reveiwing all the edge detection, Canny seems to produce the highest
+%quality edge detection!! FOR REPORT!
 
 % Task 3: Simple segmentation --------------------
+I_edge = imread('edges_canny');
+se = strel('disk', 2);
+dilated_edges = imdilate(I_edge, se);
+
 
 % Task 4: Object Recognition --------------------

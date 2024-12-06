@@ -72,7 +72,74 @@ title('Binarized Manual Test 2');
 
 
 % Task 2: Edge detection ------------------------
+%Sobel Edge Detection
+sobel_edges = edge(I_enhanced, 'Sobel');
+
+figure, imshow(sobel_edges);
+title('Sobel Edge Detection')
+%Prewitt Edge Detecttion
+prewitt_edges = edge(I_enhanced, 'prewitt');
+
+figure, imshow(prewitt_edges);
+title('Prewitt Edge Detection');
+%Canny Edge Detection
+canny_edges = edge(I_enhanced, 'Canny');
+
+figure, imshow(canny_edges);
+title('Canny Edge Detection')
+%Roberts Edge Detection
+roberts_edges = edge(I_enhanced, 'Roberts');
+
+figure, imshow(roberts_edges);
+title('Roberts Edge Detection');
+
+figure;
+subplot(2, 2, 1);
+imshow(sobel_edges);
+title('Sobel Edge Detection');
+
+subplot(2, 2, 2);
+imshow(prewitt_edges);
+title('Prewitt Edge Detection');
+
+subplot(2, 2, 3);
+imshow(canny_edges);
+title('Canny Edge Detection');
+
+subplot(2, 2, 4);
+imshow(roberts_edges);
+title('Roberts Edge Detection');
+%After reveiwing all the edge detection, Canny seems to produce the highest
+%quality edge detection!! FOR REPORT!
+% Save the selected edge detection output (e.g., Canny)
+imwrite(canny_edges, 'edges_canny.png');
 
 % Task 3: Simple segmentation --------------------
+I_edge = imread('edges_canny.png');
+se = strel('disk', 2);
+dilated_edges = imdilate(I_edge, se);
+
+figure, imshow(dilated_edges);
+title('Enhanced Edge Image');
+
+I_filled = imfill(dilated_edges, 'holes');
+
+figure, imshow(I_filled);
+title('Filled Image')
+
+I_cleaned = bwareaopen(I_filled, 50);
+I_smoothed = imclose(I_cleaned, strel('disk',3));
+
+I_labeled = bwlabel(I_smoothed);
+
+figure, imshow(label2rgb(I_labeled, 'jet','k'));
+title('Labeled Objects')
+
+%filter based on properties
+stats = regionprops(I_labeled, 'Area', 'Eccentricity');
+final_binary = ismember(I_labeled, find([stats.Area] > 50 & [stats.Eccentricity] < 0.8));
+
+figure, imshow(final_binary);
+title('Segmented Blood Cells or Bacteria')
 
 % Task 4: Object Recognition --------------------
