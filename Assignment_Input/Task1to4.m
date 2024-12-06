@@ -140,6 +140,8 @@ stats = regionprops(I_labeled, 'Area', 'Eccentricity');
 final_binary = ismember(I_labeled, find([stats.Area] > 50 & [stats.Eccentricity] < 0.8));
 
 figure, imshow(final_binary);
-title('Segmented Blood Cells or Bacteria')
+title('Segmented Blood Cells or Bacteria');
 
+%Save Segmented Image
+imwrite(final_binary, 'segmented_image.png');
 % Task 4: Object Recognition --------------------
