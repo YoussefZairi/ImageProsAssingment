@@ -1,11 +1,11 @@
-clear; close all;
 % Task 5: Robust method --------------------------
+% Task 4: Object Recognition --------------------
 
 % Load the new image
-IMG = imread('IMG_05.png');
+IMG_11 = imread('IMG_03.png');
 
 %Covert image to grayscale
-I_gray = rgb2gray(IMG);
+I_gray = rgb2gray(IMG_11);
 figure, imshow(I_gray);
 title('Grayscale Image');
 
@@ -23,7 +23,7 @@ mean_brightness = mean(I_enhanced(:)); % Mean pixel intensity across the whole i
 disp(['Mean Brightness: ', num2str(mean_brightness)]);
 
 % Define a threshold to decide binarization method (adjust as needed)
-brightness_threshold = 32; % Example threshold (range 0-255)
+brightness_threshold = 20; % Example threshold (range 0-255)
 
 %Determine threshold with Otsu's method
 threshold = graythresh(I_enhanced);
@@ -34,12 +34,13 @@ threshold = graythresh(I_enhanced);
 % Select binarization method based on mean brightness
 if mean_brightness > brightness_threshold
     % Bright image: Use global thresholding
+    disp('Using Global Thresholding...');
     threshold = graythresh(I_gray); % Compute global threshold (Otsu's method)
     I_binary = imbinarize(I_gray, threshold); % Binarize
 else
     % Dark image: Use adaptive thresholding
     disp('Using Adaptive Thresholding...');
-    sensitivity = 0.3; % Adjust sensitivity (higher for darker images)
+    sensitivity = 0.5; % Adjust sensitivity (higher for darker images)
     adaptive_thresh = adaptthresh(I_gray, sensitivity);
     I_binary = imbinarize(I_gray, adaptive_thresh); % Binarize
 end
@@ -85,19 +86,14 @@ d_edges_d_filled = d_edges_d_filled(1:end-1, 2:end);
 %Fill image
 I_filled = d_edges_a_filled | d_edges_b_filled | d_edges_c_filled | d_edges_d_filled;
 
-figure, imshow(I_filled);
-title('Filled')
 % Remove noise
-I_cleaned = bwareaopen(I_filled, 600);
-figure, imshow(I_cleaned);
-title('Cleaned')
+I_cleaned = bwareaopen(I_filled, 500);
+
 % Smooth edges
-I_smoothed = imclose(I_cleaned, strel('disk', 1));
+I_smoothed = imclose(I_cleaned, strel('disk', 2));
 
 % Label connected components
 I_labeled = bwlabel(I_smoothed);
-figure, imshow(I_labeled);
-title('Labeled')
 
 %Better Extract Features for robust
 % Extract features
@@ -113,9 +109,12 @@ for i = 1:numel(stats)
     fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Solidity = %.2f, Perimeter = %.2f, Circularity: %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Solidity, stats(i).Perimeter, circularities(i));
 end
 
+% Extract features from labeled image
+stats = regionprops(I_labeled, 'Area', 'Eccentricity','Solidity','Perimeter');
+
 % Thresholds for classification
-blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000 & circularities > 0.8 ));
-bacteria_mask = ismember(I_labeled, find([stats.Area] > 500 & circularities < 0.8 ));
+blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000  ));
+bacteria_mask = ismember(I_labeled, find([stats.Area] <=2000 & [stats.Area] > 500 ));
 
 % Create an RGB image
 colored_final = zeros([size(I_labeled), 3]);
@@ -127,19 +126,19 @@ title('Colored Final')
 
 figure;
 subplot(2, 2, 1);
-imshow(I_enhanced);
-title('Enhanced');
+imshow(sobel_edges);
+title('Sobel Edge Detection');
 
 subplot(2, 2, 2);
-imshow(I_binary);
-title('Binarized');
+imshow(prewitt_edges);
+title('Prewitt Edge Detection');
 
 subplot(2, 2, 3);
-imshow(I_edge);
-title('Edge Detection');
+imshow(canny_edges);
+title('Canny Edge Detection');
 
 subplot(2, 2, 4);
-imshow(colored_final);
+figure, imshow(colored_final);
 title('Colored Final')
 % Task 6: Performance evaluation -----------------
 % Step 1: Load ground truth data

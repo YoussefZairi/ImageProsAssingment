@@ -2,7 +2,7 @@ clear; close all;
 
 % Task 1: Pre-processing -----------------------
 % Step-1: Load input image
-I = imread('IMG_01.png');
+I = imread('IMG_08.png');
 figure, imshow(I)
 title('Original IMG 1')
 
@@ -57,8 +57,9 @@ title ('Binarized Image Otsu Method');
 
 %7.3 Expermiment with other threshholding methods
 %Manual Tresholding:
-I_binary_manual = imbinarize(I_enhanced, 0.5);
-
+I_binary_manual = imbinarize(I_enhanced, 0.25);
+figure, imshow(I_binary_manual);
+title ('Binarized 0.5');
 %figure, imshow(I_binary_manual);
 %title ('Binarized Manual Test 1');
 
@@ -198,7 +199,7 @@ imwrite(final_binary, 'segmented_image.png');
 % Task 4: Object Recognition --------------------
 
 % Load the new image
-IMG_11 = imread('IMG_11.png');
+IMG_11 = imread('IMG_08.png');
 
 %Covert image to grayscale
 I_gray = rgb2gray(IMG_11);
@@ -283,12 +284,9 @@ for i = 1:numel(stats)
     fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Solidity = %.2f, Perimeter = %.2f, Circularity: %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Solidity, stats(i).Perimeter, circularities(i));
 end
 
-% Extract features from labeled image
-stats = regionprops(I_labeled, 'Area', 'Eccentricity','Solidity','Perimeter');
-
 % Thresholds for classification
-blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000  ));
-bacteria_mask = ismember(I_labeled, find([stats.Area] <=2000 & [stats.Area] > 500 ));
+blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000 & circularities > 0.50 ));
+bacteria_mask = ismember(I_labeled, find([stats.Area] <=2000 & [stats.Area] & circularities < 0.50 ));
 
 % Create an RGB image
 colored_final = zeros([size(I_labeled), 3]);
