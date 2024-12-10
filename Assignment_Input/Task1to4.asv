@@ -194,11 +194,10 @@ title('Segmented Blood Cells or Bacteria');
 
 %Save Segmented Image
 imwrite(final_binary, 'segmented_image.png');
-% -------------------- ------------------------------------------------------------
 % Task 4: Object Recognition --------------------
 
 % Load the new image
-IMG_11 = imread('IMG_11.png');
+IMG_01 = imread('IMG_01.png');
 
 %Covert image to grayscale
 I_gray = rgb2gray(IMG_11);
@@ -276,12 +275,14 @@ areas = [stats.Area];
 eccentricities = [stats.Eccentricity];
 solidities = [stats.Solidity];
 perimeters = [stats.Perimeter];
-circularities = (4 * pi * areas) ./ (perimeters .^ 2);
 
 %Print stats
 for i = 1:numel(stats)
-    fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Solidity = %.2f, Perimeter = %.2f, Circularity: %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Solidity, stats(i).Perimeter, circularities(i));
+    fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Solidity = %.2f, : Perimeter = %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Solidity, stats(i).Perimeter);
 end
+
+% Calculate circularity (optional, for better distinction)
+circularities = (4 * pi * areas) ./ (perimeters .^ 2);
 
 % Extract features from labeled image
 stats = regionprops(I_labeled, 'Area', 'Eccentricity','Solidity','Perimeter');
