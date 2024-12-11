@@ -2,7 +2,7 @@ clear; close all;
 
 % Task 1: Pre-processing -----------------------
 % Step-1: Load input image
-I = imread('IMG_08.png');
+I = imread('IMG_11.png');
 figure, imshow(I)
 title('Original IMG 1')
 
@@ -199,7 +199,7 @@ imwrite(final_binary, 'segmented_image.png');
 % Task 4: Object Recognition --------------------
 
 % Load the new image
-IMG_11 = imread('IMG_08.png');
+IMG_11 = imread('IMG_11.png');
 
 %Covert image to grayscale
 I_gray = rgb2gray(IMG_11);
