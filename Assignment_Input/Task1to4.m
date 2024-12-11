@@ -2,7 +2,7 @@ clear; close all;
 
 % Task 1: Pre-processing -----------------------
 % Step-1: Load input image
-I = imread('IMG_11.png');
+I = imread('IMG_01.png');
 figure, imshow(I)
 title('Original IMG 1')
 

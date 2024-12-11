@@ -2,7 +2,7 @@ clear; close all;
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_05.png');
+IMG = imread('IMG_10.png');
 
 %Covert image to grayscale
 I_gray = rgb2gray(IMG);
@@ -43,9 +43,13 @@ else
     adaptive_thresh = adaptthresh(I_gray, sensitivity);
     I_binary = imbinarize(I_gray, adaptive_thresh); % Binarize
 end
+%sensitivity = 0.2;
+%adaptive_thresh = adaptthresh(I_enhanced, sensitivity, 'ForegroundPolarity','bright');
+%I_binary = imbinarize(I_enhanced, adaptive_thresh);
 
+figure; imshow(I_binary);
+title('Binarized Image');
 
-%Edge Detection
 I_edge = edge(I_binary, 'roberts');
 
 %Add Padding
@@ -114,8 +118,8 @@ for i = 1:numel(stats)
 end
 
 % Thresholds for classification
-blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000 & circularities > 0.8 ));
-bacteria_mask = ismember(I_labeled, find([stats.Area] > 500 & circularities < 0.8 ));
+blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000 & circularities > 0.6 ));
+bacteria_mask = ismember(I_labeled, find([stats.Area] > 500 & circularities < 0.6 ));
 
 % Create an RGB image
 colored_final = zeros([size(I_labeled), 3]);
