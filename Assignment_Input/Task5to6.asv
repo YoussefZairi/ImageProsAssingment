@@ -2,7 +2,7 @@ clear; close all;
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_06.png');
+IMG = imread('IMG_03.png');
 
 %Covert image to grayscale
 I_gray = rgb2gray(IMG);
@@ -17,12 +17,9 @@ I_resized = imresize(I_gray, [height, new_width]);
 
 %Enhance Image
 I_enhanced1 = imadjust(I_resized);
-figure, imshow(I_enhanced1)
-title('Enhanced 1')
+
 %Adaptive Enhanced
-I_enhanced = adapthisteq(I_enhanced1);
-figure, imshow(I_enhanced)
-title('Enhanced 2')
+
 
 % Calculate mean brightness
 mean_brightness = mean(I_enhanced(:)) / 255; % Mean pixel intensity across the whole image normalized [0,1]
