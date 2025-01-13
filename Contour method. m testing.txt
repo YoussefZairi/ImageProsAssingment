@@ -1,0 +1,18 @@
+Contour method. m testing
+IMG01 : Perfect
+IMG02 : Perfect
+IMG03 : Perfect
+IMG04 : Good, Extra small noise
+IMG05 : 3/4 , Bacteria missing due to binarization  
+IMG06 : 
+
+
+IMG11 : one piece of noise
+IMG 13 : PERFECT
+img 14 : perfect
+IMG 15: PERFECT
+
+
+IMG 08 PROBLEM
+IMG 10
+IMG 12 THICC
