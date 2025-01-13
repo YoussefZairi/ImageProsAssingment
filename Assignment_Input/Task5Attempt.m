@@ -3,7 +3,7 @@ clear; close all;
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_04.png');
+IMG = imread('IMG_11.png');
 
 % Convert image to grayscale
 I_gray = rgb2gray(IMG);
@@ -15,7 +15,7 @@ new_width = round(cols * (height / rows));
 I_resized = imresize(I_gray, [height, new_width]);
 
 % Adaptive Histogram Equalization
-I_enhanced = adapthisteq(I_gray, 'NumTiles', [16 16], 'ClipLimit', 0.01);
+I_enhanced = adapthisteq(I_gray, 'NumTiles', [32 32], 'ClipLimit', 0.012);
 
 I_smoothed = imgaussfilt(I_enhanced, 2);  % Gaussian filter with sigma=2
 
@@ -29,17 +29,21 @@ thresh = graythresh(I_normalized);
 I_binary = imbinarize(I_normalized, thresh);
 
 % Edge Detection
-I_edge = edge(I_binary, 'canny', 0.86);
+I_edge = edge(I_binary, 'roberts');
 
 % Morphological Processing
-se_close = strel('disk',5);
+se_close = strel('disk',3);
 I_closed = imclose(I_edge, se_close); %close small gaps
 
+I_bridged1 = bwmorph(I_closed, "bridge");
+
 %Add Padding
-padded_edges = padarray(I_closed, [1, 1], 0, 'both');
+padded_edges = padarray(I_bridged1, [1, 1], 0, 'both');
 se = strel('disk', 3);
+
 %Dilate
 a_dilated_edges = imdilate(padded_edges, se);
+
 %Bridge
 dilated_edges = bwmorph(a_dilated_edges,"bridge");
 
@@ -67,14 +71,22 @@ d_edges_d_filled = d_edges_d_filled(1:end-1, 2:end);
 I_filled = d_edges_a_filled | d_edges_b_filled | d_edges_c_filled | d_edges_d_filled;
 
 % Remove very small objects with area < 400
-I_cleaned = bwareaopen(I_filled, 400);
+I_cleaned = bwareaopen(I_filled, 1000);
 
 % Dilate to separate overlapping cells better
-se_dilate = strel('disk', 4);
-I_dilated = imdilate(I_cleaned, se_dilate);
+se_dilate = strel('disk', 3);
+I_dilated = imerode(I_cleaned, se_dilate);
 
 % Take objects larger than 300 pixels in area.
 I_filtered = bwareafilt(I_dilated, [500, inf]);
+
+figure;
+imshow(I_filtered);
+title('Filtered');
+
+% Morphological Processing
+se_close = strel('disk',1);
+I_closed2 = imclose(I_filtered, se_close); %close small gaps
 
 % Label connected components
 I_labeled = bwlabel(I_filtered);
@@ -87,14 +99,18 @@ circularities = (4 * pi * areas) ./ (perimeters .^ 2);
 aspectRatios = [stats.MajorAxisLength] ./ [stats.MinorAxisLength];
 
 %Define Aspect Ratio for Bacteria
-aspectRatioThreshold = 3;
+aspectRatioThreshold = 2.5;
 
 % Thresholds for classification
-blood_cells_mask = ismember(I_labeled, find(aspectRatios < aspectRatioThreshold));
+blood_cells_mask = ismember(I_labeled, find(aspectRatios < aspectRatioThreshold & [stats.Area] > 3000));
 bacteria_mask = ismember(I_labeled, find(aspectRatios > aspectRatioThreshold));
 
 % Combine masks for final result
 final_filtered = blood_cells_mask | bacteria_mask;
+
+for i = 1:numel(stats)
+    fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Perimeter = %.2f, Circularity = %.2f, Aspect Ratio = %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Perimeter, circularities(i),aspectRatios(i));
+end
 
 % Create an RGB image for visualization
 colored_final = zeros([size(final_filtered), 3]);
@@ -142,10 +158,9 @@ figure;
 imshow(colored_final);
 title('Colored Image');
 
-
 % Task 6: Performance evaluation -----------------
 %Step 1: Load ground truth data
-GT = imread("IMG_04_GT.png");
+GT = imread("IMG_06_GT.png");
 % To visualise the ground truth image, you can
 % use the following code.
 L_GT = label2rgb(rgb2gray(GT), 'prism','k','shuffle');
