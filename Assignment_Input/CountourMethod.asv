@@ -132,7 +132,8 @@ bacteria_mask_GT = GT_resized == 2;
 
 %Step 4: Function to calculate Dice Score
 function dice = calculateDice(A,B)
-    intersection = nnz(A & B);
+    intersection = sum(sum(A & B));
+    union = sum(sum(A|B));
     dice = 2* intersection / (nnz(A) + nnz(B));
 end
 

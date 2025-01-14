@@ -3,7 +3,7 @@ clear; close all;
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_08.png');
+IMG = imread('IMG_01.png');
 
 % Convert image to grayscale
 I_gray = rgb2gray(IMG);
@@ -15,7 +15,7 @@ new_width = round(cols * (height / rows));
 I_resized = imresize(I_gray, [height, new_width]);
 
 % Adaptive Histogram Equalization
-I_enhanced = adapthisteq(I_gray, 'NumTiles', [32 32], 'ClipLimit', 0.01);
+I_enhanced = adapthisteq(I_gray, 'NumTiles', [64 64], 'ClipLimit', 0.01);
 
 % Apply Gaussian smoothing
 I_smoothed = imgaussfilt(I_enhanced, 2);  % Gaussian filter with sigma=2
@@ -28,7 +28,7 @@ I_normalized = mat2gray(I_gamma);
 
 % Otsu's Method
 thresh = graythresh(I_normalized); 
-I_binary = imbinarize(I_normalized, thresh);
+I_binary = imbinarize(I_normalized, 'adaptive', 'sensitivity', 0.2);
 
 % Step 1: Edge Detection
 I_edge = edge(I_binary, 'roberts'); % Detect edges
@@ -86,6 +86,20 @@ figure;
 imshow(I_cleaned);
 title('Cleaned');
 
+% Further refine objects to separate overlapping cells
+se_dilate = strel('disk', 3);
+BW_dilated = imerode(I_cleaned, se_dilate);
+
+% Filter objects by size (2000 pixels and larger)
+BW_filtered = bwareafilt(BW_dilated, [2000, inf]);
+
+% Display final segmentation results
+figure, imshow(BW_filtered);
+title('Filtered Segmentation');
+
+% Label connected components
+I_labeled = bwlabel(BW_filtered);
+
 % Step 5: Label Objects
 % Separate blood cells and bacteria using size and shape
 blood_cell_mask = bwareaopen(imopen(logical(I_cleaned), strel('disk', 14)), 2500);
@@ -96,7 +110,7 @@ bacteria_mask = bwareaopen(bacteria_mask, 300);
 colored_final = zeros([size(I_cleaned), 3]);
 colored_final(:,:,1) = blood_cell_mask; % Red for blood cells
 colored_final(:,:,2) = bacteria_mask;   % Green for bacteria
-colored_final(:,:,3) = bacteria_mask;   % Blue for bacteria
+colored_final(:,:,3) = bacteria_mask;   % Blue to combine w green and cyan for bacteria
 figure, imshow(colored_final);
 title('Colored Final');
 
@@ -111,64 +125,17 @@ imshow(I_normalized);
 title('Normalized Image');
 
 subplot(2, 2, 3);
-imshow(segmented);
+imshow(segmented); % Segmented image
 title('Segmented Image');
 
 subplot(2, 2, 4);
-imshow(I_filled);
-title('Filled');
+imshow(BW_filtered);
+title('Filtered Segmentation');
 
 % Task 6: Performance evaluation -----------------
 % Step 1: Load ground truth data
-GT = imread("IMG_08_GT.png");
+GT = imread("IMG_14_GT.png");
 L_GT = label2rgb(rgb2gray(GT), 'prism', 'k', 'shuffle');
-
-%Step 2: Resizing GT
-GT_resized = imresize(GT,[size(colored_final, 1), size(colored_final,2)]);
-
-%Step 3: Convert GT to binary masks
-blood_cell_mask_GT = GT_resized == 1;
-bacteria_mask_GT = GT_resized == 2;
-
-%Step 4: Function to calculate Dice Score
-function dice = calculateDice(A,B)
-    intersection = nnz(A & B);
-    dice = 2* intersection / (nnz(A) + nnz(B));
-end
-
-%Step 5: Function to calculate Precision
-function precision = calculatePrecision(A, B)
-    true_positives = nnz(A & B);
-    predicted_positives = nnz(B);
-    precision = true_positives / predicted_positives;
-end
-
-%Step 6: Function to calculate Recall
-function recall = calculateRecall(A, B)
-    true_positives = nnz(A & B);
-    actual_positives = nnz(A);
-    recall = true_positives / actual_positives;
-end
-
-%Step 7: Calculate metrics for blood cells
-dice_blood_cells = calculateDice(blood_cell_mask_GT, blood_cell_mask);
-precision_blood_cells = calculatePrecision(blood_cell_mask_GT, blood_cell_mask);
-recall_blood_cells = calculateRecall(blood_cell_mask_GT, blood_cell_mask);
-%Step 8: Display blood cells results
-fprintf('Blood Cells:\n');
-fprintf('Dice Score: %.4f\n', dice_blood_cells);
-fprintf('Precision: %.4f\n', precision_blood_cells);
-fprintf('Recall: %.4f\n', recall_blood_cells);
-
-%Step 9: Calculate metrics for bacteria
-dice_bacteria = calculateDice(bacteria_mask_GT, bacteria_mask);
-precision_bacteria = calculatePrecision(bacteria_mask_GT, bacteria_mask);
-recall_bacteria = calculateRecall(bacteria_mask_GT, bacteria_mask);
-%Step 10: Display bacteria results
-fprintf('Bacteria:\n');
-fprintf('Dice Score: %.4f\n', dice_bacteria);
-fprintf('Precision: %.4f\n', precision_bacteria);
-fprintf('Recall: %.4f\n', recall_bacteria);
 
 subplot(2,1,1);
 imshow(L_GT);
