@@ -1,180 +1,192 @@
 clear; close all;
+
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_06.png');
+IMG = imread('IMG_09.png');
 
-%Covert image to grayscale
+% Convert image to grayscale
 I_gray = rgb2gray(IMG);
-figure, imshow(I_gray);
-title('Grayscale Image');
 
-%Rescale image
+% Rescale image
 height = 512;
-[rows,cols] = size(I_gray);
+[rows, cols] = size(I_gray);
 new_width = round(cols * (height / rows));
 I_resized = imresize(I_gray, [height, new_width]);
 
-%Enhance Image
-I_enhanced1 = imadjust(I_resized);
-figure, imshow(I_enhanced1)
-title('Enhanced 1')
-%Adaptive Enhanced
-I_enhanced = adapthisteq(I_enhanced1);
-figure, imshow(I_enhanced)
-title('Enhanced 2')
+% Adaptive Histogram Equalization
+I_enhanced = adapthisteq(I_gray, 'NumTiles', [32 32], 'ClipLimit', 0.01);
 
-% Calculate mean brightness
-mean_brightness = mean(I_enhanced(:)) / 255; % Mean pixel intensity across the whole image normalized [0,1]
-disp(['Mean Brightness: ', num2str(mean_brightness)]);
-alpha = 0.5;
-% Define a threshold to decide binarization method (adjust as needed)
-brightness_threshold = 17; % Example threshold (range 0-255)
-%deTErmined through finding an image where otsu's method worked correctly
-%(i.e img_01 has a mean brightness of Mean Brightness: 17.6348.
-%Determine threshold with Otsu's method
-threshold = graythresh(I_enhanced);
+% Apply Gaussian smoothing
+I_smoothed = imgaussfilt(I_enhanced, 2);  % Gaussian filter with sigma=2
 
-%Convert to Binary
-%%%I_binary = imbinarize(I_enhanced, threshold);
+gamma = 0.8;  % Gamma < 1 brightens, Gamma > 1 darkens
+I_gamma = imadjust(I_smoothed, [], [], gamma);
 
-% Select binarization method based on mean brightness
-if mean_brightness > brightness_threshold
-    % Bright image: Use global thresholding
-    disp('Using Global Thresholding...');
-    threshold = graythresh(I_gray); % Compute global threshold (Otsu's method)
-    I_binary = imbinarize(I_gray, threshold); % Binarize
-else
-    % Dark image: Use adaptive thresholding
-    disp('Using Adaptive Thresholding...');
-    sensitivity = alpha * (1-mean_brightness); % Adjust sensitivity (higher for darker images)
-    adaptive_thresh = adaptthresh(I_gray, sensitivity);
-    I_binary = imbinarize(I_gray, adaptive_thresh); % Binarize
-end
-%sensitivity = 0.2;
-%adaptive_thresh = adaptthresh(I_enhanced, sensitivity, 'ForegroundPolarity','bright');
-%I_binary = imbinarize(I_enhanced, adaptive_thresh);
-%%%%%%%%%%IMPLEMENT SEPERATION MORPHOLIGICAL METHODS%%%%%%%%%%%
-figure; imshow(I_binary);
-title('Binarized Image');
+% Normalize to range [0, 1]
+I_normalized = mat2gray(I_gamma);
 
-I_seperated = bwmorph(I_binary, 'shrink', 4);
-figure; imshow(I_seperated);
-title('Seperated');
+% Otsu's Method
+thresh = graythresh(I_normalized); 
+I_binary = imbinarize(I_normalized, thresh);
 
-se = strel('disk', 1);  % Define a small disk-shaped structuring element
-I_eroded = imerode(I_binary, se);  % Erode the image to create gaps
 
-I_seperated_eroded = bwmorph(I_eroded, 'shrink', 3);
-
-I_edge = edge(I_binary, 'roberts');
-
-%Add Padding
-padded_edges = padarray(I_edge, [1, 1], 0, 'both');
-se = strel('disk', 3);
-%Dilate
-a_dilated_edges = imdilate(padded_edges, se);
-%Bridge
-dilated_edges = bwmorph(a_dilated_edges,"bridge");
-
-%FILL CORNERS
-%Fill Corners (ref
-%https://blogs.mathworks.com/steve/2013/09/05/defining-and-filling-holes-on-the-border-of-an-image/)
-
-%a: Filling the cells at top and left border of the image
-d_edges_a = padarray(dilated_edges,[1 1],1,'pre');
-d_edges_a_filled = imfill(d_edges_a, "holes");
-d_edges_a_filled = d_edges_a_filled(2:end, 2:end);
-
-%b: Filling the cells at top and right border of the image
-d_edges_b = padarray(padarray(dilated_edges,[1 0],1,'pre'),[0 1],1,'post');
-d_edges_b_filled = imfill(d_edges_b, "holes");
-d_edges_b_filled = d_edges_b_filled(2:end, 1:end-1);
-
-%c: Filling the cells at bottom and right border of the image
-d_edges_c = padarray(dilated_edges,[1 1],1,'post');
-d_edges_c_filled = imfill(d_edges_c, "holes");
-d_edges_c_filled = d_edges_c_filled(1:end-1,1:end-1);
-
-%d: Filling the cells at top and left border of the image
-d_edges_d = padarray(padarray(dilated_edges,[1 0],1,'post'),[0 1],1,'pre');
-d_edges_d_filled = imfill(d_edges_d, "holes");
-d_edges_d_filled = d_edges_d_filled(1:end-1, 2:end);
-
-%Fill image
-I_filled = d_edges_a_filled | d_edges_b_filled | d_edges_c_filled | d_edges_d_filled;
-
-figure, imshow(I_filled);
-title('Filled')
-% Remove noise
-I_cleaned = bwareaopen(I_filled, 600);
-figure, imshow(I_cleaned);
-title('Cleaned')
-% Smooth edges
-I_smoothed = imclose(I_cleaned, strel('disk', 1));
-
-% Label connected components
-I_labeled = bwlabel(I_smoothed);
-figure, imshow(I_labeled);
-title('Labeled')
-
-%Better Extract Features for robust
-% Extract features
-stats = regionprops(I_labeled, 'Area', 'Eccentricity', 'Solidity', 'Perimeter');
-areas = [stats.Area];
-eccentricities = [stats.Eccentricity];
-solidities = [stats.Solidity];
-perimeters = [stats.Perimeter];
-circularities = (4 * pi * areas) ./ (perimeters .^ 2);
-
-%Print stats
-for i = 1:numel(stats)
-    fprintf('Object %d: Area = %.2f, Eccentricity = %.2f, Solidity = %.2f, Perimeter = %.2f, Circularity: %.2f\n', i, stats(i).Area, stats(i).Eccentricity, stats(i).Solidity, stats(i).Perimeter, circularities(i));
-end
-
-% Thresholds for classification
-blood_cells_mask = ismember(I_labeled, find([stats.Area] > 2000 & circularities > 0.6 ));
-bacteria_mask = ismember(I_labeled, find([stats.Area] > 500 & circularities < 0.6 ));
-
-final_filtered = blood_cells_mask | bacteria_mask;
-
-% Create an RGB image
-colored_final = zeros([size(final_filtered), 3]);
-colored_final(:,:,1) = blood_cells_mask;
-colored_final(:,:,2) = bacteria_mask;
-colored_final(:,:,3) = bacteria_mask;
-figure, imshow(colored_final);
-title('Colored Final')
-
-figure;
-subplot(2, 2, 1);
-imshow(I_enhanced);
-title('Enhanced');
-
-subplot(2, 2, 2);
-imshow(I_binary);
-title('Binarized');
-
-subplot(2, 2, 3);
-imshow(I_edge);
+% Step 1: Edge Detection
+I_edge = edge(I_binary, 'roberts'); % Detect edges
+figure, imshow(I_edge);
 title('Edge Detection');
 
-subplot(2, 2, 4);
-imshow(colored_final);
-title('Colored Final')
+% Step 2: Morphological Processing
+se_close = strel('disk', 3);
+I_closed = imclose(I_edge, se_close); % Close small gaps
+I_bridged1 = bwmorph(I_closed, "bridge"); % Bridge gaps in edges
+figure, imshow(I_bridged1);
+title('Bridged Edges');
 
-figure; imshow(I_seperated);
-title('Seperated');
-figure; imshow(I_eroded);
-title('Eroded')
-figure; imshow(I_seperated_eroded);
-title('Seperated - Eroded');
+% Step 3: Segmentation using Active Contour
+mask = zeros(size(I_binary)); 
+mask(50:end-50, 50:end-50) = 1;  % Initial mask (avoid borders)
+bw = activecontour(I_binary, mask, 1000); % Segment with active contour
+segmented = bwareaopen(bw, 700); % Remove small objects (<700 pixels)
+figure, imshow(segmented);
+title('Active Contour Segmentation');
+
+% Filling Image
+
+% Add padding to the top and bottom edges
+top_bottom_padding = padarray(segmented, [1, 0], 1, 'both');  % Add rows
+top_bottom_filled = imfill(top_bottom_padding, 'holes');      % Fill holes
+
+% Add padding to the left and right edges
+left_right_padding = padarray(segmented, [0, 1], 1, 'both');  % Add columns
+left_right_filled = imfill(left_right_padding, 'holes');      % Fill holes
+
+% Crop both filled images back to the original size
+top_bottom_cropped = top_bottom_filled(2:end-1, :);
+left_right_cropped = left_right_filled(:, 2:end-1);
+
+% Combine the cropped filled images
+combined_filled = top_bottom_cropped | left_right_cropped;
+
+% Dilate the combined edges
+se = strel('disk', 2);
+dilated_edges = imdilate(combined_filled, se);
+
+% Fill all holes in the combined image
+I_filled = imfill(dilated_edges, 'holes');
+
+% Display the final filled image
+figure;
+imshow(I_filled);
+title('Final Selective Edge Padding and Filling');
+
+% Remove very small objects
+I_cleaned = bwareaopen(I_filled, 400);
+
+figure;
+imshow(I_cleaned);
+title('Cleaned');
+
+% Step 5: Label Objects
+% Separate blood cells and bacteria using size and shape
+blood_cell_mask = bwareaopen(imopen(logical(I_cleaned), strel('disk', 14)), 2500);
+bacteria_mask = I_cleaned & ~blood_cell_mask;
+bacteria_mask = bwareaopen(bacteria_mask, 700);
+
+I_final = blood_cell_mask | bacteria_mask;
+
+% Combine labeled masks into an RGB image
+colored_final = zeros([size(I_cleaned), 3]);
+colored_final(:,:,1) = blood_cell_mask; % Red for blood cells
+colored_final(:,:,2) = bacteria_mask;   % Green for bacteria
+colored_final(:,:,3) = bacteria_mask;   % Blue for bacteria
+
+% Display Results
+subplot(2, 3, 1);
+imshow(I_edge);
+title('Robert Edge Detection');
+
+subplot(2, 3, 2);
+imshow(I_bridged1);
+title('Bridged Image');
+
+subplot(2, 3, 3);
+imshow(I_filled);
+title('Filled Image');
+
+subplot(2, 3, 4);
+imshow(I_filled);
+title('Filled');
+
+subplot(2, 3, 5);
+imshow(I_cleaned);
+title('Cleaned');
+
+subplot(2, 3, 6);
+imshow(colored_final);
+title('Object Detection');
 
 % Task 6: Performance evaluation -----------------
 % Step 1: Load ground truth data
-%GT = imread("IMG_01_GT.png");
+GT = imread("IMG_09_GT.png");
+L_GT = label2rgb(rgb2gray(GT), 'prism', 'k', 'shuffle');
 
-% To visualise the ground truth image, you can
-% use the following code.
-%L_GT = label2rgb(rgb2gray(GT), 'prism','k','shuffle');
-%figure, imshow(L_GT)
+%Step 2: Resizing GT
+GT_resized = imresize(GT,[size(I_final, 1), size(I_final,2)]);
+
+%Step 3: Convert GT to binary masks
+blood_cell_mask_GT = GT_resized == 1;
+bacteria_mask_GT = GT_resized == 2;
+
+%Step 4: Calculate True Positives False Negatives and False Positives 
+TP_blood_cell = nnz(blood_cell_mask_GT & blood_cell_mask);
+FN_blood_cell = nnz(blood_cell_mask_GT & ~blood_cell_mask);
+FP_blood_cell = nnz(~blood_cell_mask_GT & blood_cell_mask);
+
+TP_bacteria = nnz(bacteria_mask_GT & bacteria_mask);  
+FN_bacteria = nnz(bacteria_mask_GT & ~bacteria_mask);
+FP_bacteria = nnz(~bacteria_mask_GT & bacteria_mask);
+%Comparing colored final image to the L_GT binary
+TP_colored_final = nnz(GT_resized & I_final);
+FN_colored_final = nnz(GT_resized & ~I_final);
+FP_colored_final = nnz(~GT_resized & I_final);
+
+%Step 7: Calculate metrics for blood cells
+dice_blood_cells = 2 * TP_blood_cell / (2 * TP_blood_cell + FP_blood_cell + FN_blood_cell);
+precision_blood_cells = TP_blood_cell / (TP_blood_cell + FP_blood_cell);
+recall_blood_cells = TP_blood_cell / (TP_blood_cell + FN_blood_cell);
+
+%Step 8: Display blood cells results
+fprintf('Blood Cells:\n');
+fprintf('Dice Score: %.4f\n', dice_blood_cells);
+fprintf('Precision: %.4f\n', precision_blood_cells);
+fprintf('Recall: %.4f\n', recall_blood_cells);
+
+%Step 9: Calculate metrics for bacteria
+dice_bacteria = 2 * TP_bacteria / (2 * TP_bacteria + FP_bacteria + FN_bacteria);
+precision_bacteria = TP_bacteria / (TP_bacteria + FP_bacteria);
+recall_bacteria = TP_bacteria / (TP_bacteria + FN_bacteria);
+
+%Step 10: Display bacteria results
+fprintf('\nBacteria:\n');
+fprintf('Dice Score: %.4f\n', dice_bacteria);
+fprintf('Precision: %.4f\n', precision_bacteria);
+fprintf('Recall: %.4f\n', recall_bacteria);
+
+%Step 11: Calculate metrics for bacteria
+dice_final = 2 * TP_colored_final / (2 * TP_colored_final + FP_colored_final + FN_colored_final);
+precision_final = TP_colored_final / (TP_colored_final + FP_colored_final);
+recall_final = TP_colored_final / (TP_colored_final + FN_colored_final);
+
+%Step 12: Display bacteria results
+fprintf('\nOverall Similarity:\n');
+fprintf('Dice Score: %.4f\n', dice_final);
+fprintf('Precision: %.4f\n', precision_final);
+fprintf('Recall: %.4f\n', recall_final);
+
+subplot(2,1,1);
+imshow(L_GT);
+title('Ground Truth')
+subplot(2,1,2);
+imshow(colored_final);
+title('Colored Final');

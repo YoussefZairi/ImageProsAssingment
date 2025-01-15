@@ -349,7 +349,7 @@ title('Enhanced Image')
 nexttile;
 imshow(I_binary);
 title('Binarized Image')
-nexttile;
+nextile;
 imshow(I_edge);
 title('Roberts Edge Detection')
 nexttile;
@@ -364,6 +364,5 @@ title('Blood Cells Mask')
 nexttile;
 imshow(bacteria_mask);
 title('Bacteria Mask')
-nexttile;
-imshow(colored_final);
-title('Object Detection')
+nextile;
+title

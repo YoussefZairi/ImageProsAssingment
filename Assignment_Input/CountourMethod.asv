@@ -3,7 +3,7 @@ clear; close all;
 % Task 5: Robust method --------------------------
 
 % Load the new image
-IMG = imread('IMG_08.png');
+IMG = imread('IMG_09.png');
 
 % Convert image to grayscale
 I_gray = rgb2gray(IMG);
@@ -29,6 +29,7 @@ I_normalized = mat2gray(I_gamma);
 % Otsu's Method
 thresh = graythresh(I_normalized); 
 I_binary = imbinarize(I_normalized, thresh);
+
 
 % Step 1: Edge Detection
 I_edge = edge(I_binary, 'roberts'); % Detect edges
@@ -77,7 +78,7 @@ I_filled = imfill(dilated_edges, 'holes');
 % Display the final filled image
 figure;
 imshow(I_filled);
-title('Final Selective Edge Padding and Filling');
+title('Padded and Filled');
 
 % Remove very small objects
 I_cleaned = bwareaopen(I_filled, 400);
@@ -90,7 +91,9 @@ title('Cleaned');
 % Separate blood cells and bacteria using size and shape
 blood_cell_mask = bwareaopen(imopen(logical(I_cleaned), strel('disk', 14)), 2500);
 bacteria_mask = I_cleaned & ~blood_cell_mask;
-bacteria_mask = bwareaopen(bacteria_mask, 300);
+bacteria_mask = bwareaopen(bacteria_mask, 700);
+
+I_final = blood_cell_mask | bacteria_mask;
 
 % Combine labeled masks into an RGB image
 colored_final = zeros([size(I_cleaned), 3]);
@@ -98,63 +101,55 @@ colored_final(:,:,1) = blood_cell_mask; % Red for blood cells
 colored_final(:,:,2) = bacteria_mask;   % Green for bacteria
 colored_final(:,:,3) = bacteria_mask;   % Blue for bacteria
 figure, imshow(colored_final);
-title('Colored Final');
+
 
 % Display Results
-figure;
 subplot(2, 2, 1);
-imshow(I_enhanced);
-title('Enhanced Image');
+imshow(segmented);
+title('Active Contour Segmentation');
 
 subplot(2, 2, 2);
-imshow(I_normalized);
-title('Normalized Image');
-
-subplot(2, 2, 3);
-imshow(segmented);
-title('Segmented Image');
-
-subplot(2, 2, 4);
 imshow(I_filled);
 title('Filled');
 
+subplot(2, 2, 3);
+imshow(I_cleaned);
+title('Cleaned');
+
+subplot(2, 2, 4);
+imshow(colored_final);
+title('Object Detection');
+
 % Task 6: Performance evaluation -----------------
 % Step 1: Load ground truth data
-GT = imread("IMG_08_GT.png");
+GT = imread("IMG_09_GT.png");
 L_GT = label2rgb(rgb2gray(GT), 'prism', 'k', 'shuffle');
 
 %Step 2: Resizing GT
-GT_resized = imresize(GT,[size(colored_final, 1), size(colored_final,2)]);
+GT_resized = imresize(GT,[size(I_final, 1), size(I_final,2)]);
 
 %Step 3: Convert GT to binary masks
 blood_cell_mask_GT = GT_resized == 1;
 bacteria_mask_GT = GT_resized == 2;
 
-%Step 4: Function to calculate Dice Score
-function dice = calculateDice(A,B)
-    intersection = sum(sum(A & B));
-    union = sum(sum(A|B));
-    dice = 2* intersection / (nnz(A) + nnz(B));
-end
+%Step 4: Calculate True Positives False Negatives and False Positives 
+TP_blood_cell = nnz(blood_cell_mask_GT & blood_cell_mask);
+FN_blood_cell = nnz(blood_cell_mask_GT & ~blood_cell_mask);
+FP_blood_cell = nnz(~blood_cell_mask_GT & blood_cell_mask);
 
-%Step 5: Function to calculate Precision
-function precision = calculatePrecision(A, B)
-    true_positives = nnz(A & B);
-    predicted_positives = nnz(B);
-    precision = true_positives / predicted_positives;
-end
-
-%Step 6: Function to calculate Recall
-function recall = calculateRecall(A, B)
-    true_positives = nnz(A & B);
-    actual_positives = nnz(A);
-    recall = true_positives / actual_positives;
-end
+TP_bacteria = nnz(bacteria_mask_GT & bacteria_mask);  
+FN_bacteria = nnz(bacteria_mask_GT & ~bacteria_mask);
+FP_bacteria = nnz(~bacteria_mask_GT & bacteria_mask);
+%Comparing colored final image to the L_GT binary
+TP_colored_final = nnz(GT_resized & I_final);
+FN_colored_final = nnz(GT_resized & ~I_final);
+FP_colored_final = nnz(~GT_resized & I_final);
 
 %Step 7: Calculate metrics for blood cells
-dice_blood_cells = calculateDice(blood_cell_mask_GT, blood_cell_mask);
-precision_blood_cells = calculatePrecision(blood_cell_mask_GT, blood_cell_mask);
-recall_blood_cells = calculateRecall(blood_cell_mask_GT, blood_cell_mask);
+dice_blood_cells = 2 * TP_blood_cell / (2 * TP_blood_cell + FP_blood_cell + FN_blood_cell);
+precision_blood_cells = TP_blood_cell / (TP_blood_cell + FP_blood_cell);
+recall_blood_cells = TP_blood_cell / (TP_blood_cell + FN_blood_cell);
+
 %Step 8: Display blood cells results
 fprintf('Blood Cells:\n');
 fprintf('Dice Score: %.4f\n', dice_blood_cells);
@@ -162,14 +157,26 @@ fprintf('Precision: %.4f\n', precision_blood_cells);
 fprintf('Recall: %.4f\n', recall_blood_cells);
 
 %Step 9: Calculate metrics for bacteria
-dice_bacteria = calculateDice(bacteria_mask_GT, bacteria_mask);
-precision_bacteria = calculatePrecision(bacteria_mask_GT, bacteria_mask);
-recall_bacteria = calculateRecall(bacteria_mask_GT, bacteria_mask);
+dice_bacteria = 2 * TP_bacteria / (2 * TP_bacteria + FP_bacteria + FN_bacteria);
+precision_bacteria = TP_bacteria / (TP_bacteria + FP_bacteria);
+recall_bacteria = TP_bacteria / (TP_bacteria + FN_bacteria);
+
 %Step 10: Display bacteria results
-fprintf('Bacteria:\n');
+fprintf('\nBacteria:\n');
 fprintf('Dice Score: %.4f\n', dice_bacteria);
 fprintf('Precision: %.4f\n', precision_bacteria);
 fprintf('Recall: %.4f\n', recall_bacteria);
+
+%Step 11: Calculate metrics for bacteria
+dice_final = 2 * TP_colored_final / (2 * TP_colored_final + FP_colored_final + FN_colored_final);
+precision_final = TP_colored_final / (TP_colored_final + FP_colored_final);
+recall_final = TP_colored_final / (TP_colored_final + FN_colored_final);
+
+%Step 12: Display bacteria results
+fprintf('\nOverall Similarity:\n');
+fprintf('Dice Score: %.4f\n', dice_final);
+fprintf('Precision: %.4f\n', precision_final);
+fprintf('Recall: %.4f\n', recall_final);
 
 subplot(2,1,1);
 imshow(L_GT);
